@@ -9,6 +9,7 @@ TEST_1 = output/test1.out
 .SILENT:
 
 all: 
+	mkdir output
 	$(CC) $(CFLAGS) gnl_tester.c ../get_next_line.c ../get_next_line_utils.c -D BUFFER_SIZE=42 -o $(TEST_1) 
 	-$(VALGRIND) ./$(TEST_1)
 
