@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <fcntl.h>
+#include "../get_next_line.h" 
 
-size_t	ft_strlen(const char *s)
+static size_t	test_strlen(const char *s)
 {
 	size_t	index;
 
@@ -19,7 +21,7 @@ size_t	ft_strlen(const char *s)
 	}
 }
 
-int	ft_strncmp(const char *s1, const char *s2, size_t n)
+static int	test_strncmp(const char *s1, const char *s2, size_t n)
 {
 	size_t	index;
 	size_t	s1_len;
@@ -28,8 +30,8 @@ int	ft_strncmp(const char *s1, const char *s2, size_t n)
 
 	index = 0;
 	returnval = 0;
-	s1_len = ft_strlen(s1);
-	s2_len = ft_strlen(s2);
+	s1_len = test_strlen(s1);
+	s2_len = test_strlen(s2);
 	while (index < n && (index < s1_len || index < s2_len))
 	{
 		if ((unsigned char)s1[index] != (unsigned char)s2[index])
@@ -43,36 +45,48 @@ int	ft_strncmp(const char *s1, const char *s2, size_t n)
 int tester (const char * path, char *str, int testnbr, int linenbr)
 {
 	int 	rtr;
+	int		fd;
 	char 	*gnl;
+	int		error_index;
 	FILE 	*errorLog;
-	char	errorBuffer[300];
 
+	error_index = 0; 
 	rtr = 0;
-	gnl = get_next_line(path);
-	rtr += ft_strncmp(str, gnl, 25);
+	fd = open(path, O_RDONLY);
+	gnl = get_next_line(fd);
+	rtr += test_strncmp(str, gnl, test_strlen(str));
 	if (rtr != 0)
 	{
-		errorLog = fopen("error_log.txt", "a");
+		errorLog = fopen("logs/error_log.txt", "a");
 
 		if (errorLog == NULL)
     	{
-        	printf("Error opening the file %s", errorLog);
+			free(gnl);
+        	printf("Error opening the file");
         	return 1;
     	}
 		printf("Test %d\n", testnbr);
 		printf("FAIL\n");
+		printf("Line number: %d\n", linenbr);
 		printf("Check error_log.txt\n");
-		fputs(snprintf(errorBuffer, 300, "Line %d\n", linenbr), errorLog);
-		fputs(snprintf(errorBuffer, 300, "expected output: %s"), errorLog);
-		fputs(snprintf(errorBuffer, 300, "gnl output: %s"),  errorLog);
+		fprintf(errorLog, "----------------\n");
+		fprintf(errorLog, "Test number %d\n", testnbr);
+		fprintf(errorLog, "Line %d\n", linenbr);
+		while (str[error_index] != '\0')
+			fprintf(errorLog, "expected output: %d\n", str[error_index++]);
+		error_index = 0;
+		fprintf(errorLog, "expected output: %s\n", str);
+		while (gnl[error_index]!= '\0')
+			fprintf(errorLog, "gnl output: %d\n", gnl[error_index++]);
+		fprintf(errorLog, "gnl output: %s\n", gnl);
+		fprintf(errorLog, "strncmp difference: %d\n", rtr);
 		fclose(errorLog);
-	}
-	else
-	{
-		printf("Test %d\n", testnbr);
-		printf("OK\n");
+		free(gnl);
 		return(0);
 	}
+	printf("Test %d OK\n", testnbr);
+	free(gnl);
+	return(0);
 }
 
 int main (void)
@@ -82,11 +96,13 @@ int main (void)
 
 	testnbr = 0;
 	linenbr = 0;
+	fclose(fopen("logs/error_log.txt", "w"));
 	printf("------------------\n");
 	printf("|     tests x    |\n");
 	printf("------------------\n");
 	testnbr++;
 	linenbr++;
-	if(tester("test.txt", "lololol", testnbr, linenbr) == 1)
-		return(1);
+	if(tester("test_files/test.txt", "lololol\n", testnbr, linenbr) == 1)
+		return(0);
+	return(1);
 }
